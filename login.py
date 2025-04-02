@@ -1,213 +1,114 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session
+from flask import Flask, render_template,jsonify , request, redirect, url_for, session, flash
 import mysql.connector
 from mysql.connector import Error
 import bcrypt
+import os
 
 app = Flask(__name__)
-app.secret_key = 'your_very_secure_secret_key_here'  # Change this for production
-app.config['SESSION_COOKIE_SECURE'] = False  # True in production
+app.secret_key = os.urandom(24)  # Better secret key generation
+app.config['SESSION_COOKIE_SECURE'] = False  # True in production with HTTPS
 app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['TEMPLATES_AUTO_RELOAD'] = True  # Helpful during development
 
-# Database connection function
+# Simplified demo users with plain passwords for testing (remove in production)
+DEMO_USERS = {
+    "hr_demo": {
+        "password": "hr123",
+        "role": "hr"
+    },
+    "accountant_demo": {
+        "password": "accountant123",
+        "role": "accountant"
+    },
+    "manager_demo": {
+        "password": "manager123",
+        "role": "manager"
+    }
+}
+
 def get_db_connection():
     try:
         connection = mysql.connector.connect(
             host='localhost',
             user='abel tiruneh',
             password='Ab1996@2468',
-            database='Time_Internation_BANK'
+            database='TIME_BANK',
+            auth_plugin='mysql_native_password'  # Important for MySQL 8+
         )
         return connection
     except Error as e:
         print(f"Error connecting to MySQL: {e}")
         return None
 
-# Password hashing functions
-def hash_password(password):
-    if isinstance(password, str):
-        password = password.encode('utf-8')
-    return bcrypt.hashpw(password, bcrypt.gensalt()).decode('utf-8')
-
-def check_password(hashed_password, user_password):
-    try:
-        if isinstance(hashed_password, str):
-            hashed_password = hashed_password.encode('utf-8')
-        if isinstance(user_password, str):
-            user_password = user_password.encode('utf-8')
-        return bcrypt.checkpw(user_password, hashed_password)
-    except Exception as e:
-        print(f"Password check error: {e}")
-        return False
-
 @app.route('/')
 def home():
-    session.clear()
-    return render_template('login.html')
-
-@app.route('/login', methods=['POST'])
+    return redirect(url_for('login'))
+@app.route('/login', methods=['GET', 'POST'])
 def login():
-    try:
-        if not request.is_json:
-            return jsonify({'error': 'Request must be JSON'}), 400
-
-        data = request.get_json()
-        username = data.get('username', '').strip()
-        password = data.get('password', '').strip()
-
-        if not username or not password:
-            return jsonify({'error': 'Username and password required'}), 400
-
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'error': 'Database unavailable'}), 503
-
-        try:
-            with conn.cursor(dictionary=True) as cursor:
-                # Get user with department info
-                cursor.execute("""
-                    SELECT e.*, d.dep_name 
-                    FROM employee e
-                    JOIN department d ON e.dep_id = d.dep_id
-                    WHERE username = %s
-                """, (username,))
-                user = cursor.fetchone()
-
-                if not user:
-                    return jsonify({'error': 'Invalid credentials'}), 401
-
-                print(f"Stored hash: {user['passwords']}")
-                if not check_password(user['passwords'], password):
-                    return jsonify({'error': 'Invalid credentials'}), 401
-
-                # Set session data
-                session.update({
-                    'user_id': user['emp_id'],
-                    'emp_id': user['emp_id'],
-                    'username': user['username'],
-                    'job_title': user['job_title'],
-                    'name': user['emp_name'],
-                    'department': user['dep_name'],
-                    'logged_in': True
-                })
-
+    if request.method == 'POST':
+        # Handle both form and JSON requests
+        if request.is_json:
+            data = request.get_json()
+            username = data.get('username')
+            password = data.get('password')
+            is_ajax = True
+        else:
+            username = request.form.get('username')
+            password = request.form.get('password')
+            is_ajax = False
+        
+        # Check demo users
+        if username in DEMO_USERS and password == DEMO_USERS[username]['password']:
+            session['username'] = username
+            session['role'] = DEMO_USERS[username]['role']
+            
+            if is_ajax:
                 return jsonify({
                     'success': True,
-                    'user': {
-                        'id': user['emp_id'],
-                        'name': user['emp_name'],
-                        'role': user['job_title'],
-                        'department': user['dep_name']
-                    }
+                    'redirect': url_for(f"{DEMO_USERS[username]['role']}_dashboard")
                 })
-
-        except Error as e:
-            print(f"Database error: {str(e)}")
-            return jsonify({'error': 'Database operation failed'}), 500
-        finally:
-            if conn and conn.is_connected():
-                conn.close()
-
-    except Exception as e:
-        print(f"Unexpected error: {str(e)}")
-        return jsonify({'error': 'Internal server error'}), 500
-
-# Temporary development routes (REMOVE IN PRODUCTION)
-@app.route('/dev-reset-password', methods=['POST'])
-def dev_reset_password():
-    """Reset password for development (REMOVE IN PRODUCTION)"""
-    data = request.get_json()
-    username = data.get('username')
-    new_password = data.get('password')
-
-    if not username or not new_password:
-        return jsonify({'error': 'Username and password required'}), 400
-
-    hashed = hash_password(new_password)
-    
-    conn = get_db_connection()
-    if not conn:
-        return jsonify({'error': 'Database unavailable'}), 503
-
-    try:
-        with conn.cursor() as cursor:
-            cursor.execute(
-                "UPDATE employee SET passwords = %s WHERE username = %s",
-                (hashed, username)
-            )
-            conn.commit()
+            else:
+                flash('Login successful!', 'success')
+                return redirect(url_for(f"{DEMO_USERS[username]['role']}_dashboard"))
+        
+        # Failed login
+        if is_ajax:
             return jsonify({
-                'success': True,
-                'message': 'Password updated',
-                'username': username,
-                'new_password': new_password  # Only for development!
-            })
-    except Error as e:
-        print(f"Password reset error: {str(e)}")
-        return jsonify({'error': 'Password reset failed'}), 500
-    finally:
-        if conn and conn.is_connected():
-            conn.close()
-
-@app.route('/dev-create-test-user', methods=['POST'])
-def dev_create_test_user():
-    """Create test user (REMOVE IN PRODUCTION)"""
-    test_user = {
-        'emp_id': 9999,
-        'emp_name': 'Test HR',
-        'gender': 'M',
-        'dep_id': 107,  # HR department
-        'job_title': 'HR Manager',
-        'salary': 50000.00,
-        'dbo': '1990-01-01',
-        'phone': 1234567890,
-        'city': 'Addis Ababa',
-        'address': '22 Bole Road',
-        'email': 'testhr@bank.com',
-        'username': 'testhr',
-        'password': 'testpassword'
-    }
+                'success': False,
+                'error': 'Invalid username or password'
+            }), 401
+        else:
+            flash('Invalid credentials', 'danger')
+            return redirect(url_for('login'))
     
-    hashed_pw = hash_password(test_user['password'])
-    
-    conn = get_db_connection()
-    if not conn:
-        return jsonify({'error': 'Database unavailable'}), 503
+    return render_template('login.html')
 
-    try:
-        with conn.cursor() as cursor:
-            cursor.execute("""
-                INSERT INTO employee (
-                    emp_id, emp_name, gender, dep_id, job_title, salary,
-                    dbo, phone, city, address, email, username, passwords
-                ) VALUES (
-                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
-                )
-            """, tuple(test_user.values()))
-            
-            conn.commit()
-            return jsonify({
-                'success': True,
-                'message': 'Test user created',
-                'credentials': {
-                    'username': 'testhr',
-                    'password': 'testpassword'
-                }
-            })
-    except Error as e:
-        conn.rollback()
-        print(f"User creation error: {str(e)}")
-        return jsonify({'error': 'User creation failed'}), 500
-    finally:
-        if conn and conn.is_connected():
-            conn.close()
+@app.route('/hr_dashboard')
+def hr_dashboard():
+    if 'username' not in session or session.get('role') != 'hr':
+        flash('You are not authorized to access this page', 'danger')
+        return redirect(url_for('login'))
+    return render_template('HR_Dashboard.html', username=session['username'])
 
-# Dashboard routes (HR, Accountant, Manager) remain unchanged from your original code
-# ...
+@app.route('/accountant_dashboard')
+def accountant_dashboard():
+    if 'username' not in session or session.get('role') != 'accountant':
+        flash('You are not authorized to access this page', 'danger')
+        return redirect(url_for('login'))
+    return render_template('accountant_dashboard.html', username=session['username'])
+
+@app.route('/manager_dashboard')
+def manager_dashboard():
+    if 'username' not in session or session.get('role') != 'manager':
+        flash('You are not authorized to access this page', 'danger')
+        return redirect(url_for('login'))
+    return render_template('Manager.html', username=session['username'])
 
 @app.route('/logout')
 def logout():
     session.clear()
-    return redirect(url_for('home'))
+    flash('You have been logged out', 'info')
+    return redirect(url_for('login'))
 
 if __name__ == '__main__':
-    app.run(host='127.0.0.1', port=8000, debug=True)
+    app.run(debug=True, port=5000)
