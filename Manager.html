@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manager Dashboard - Time International Bank</title>
+  <link rel="stylesheet" href="/static/css/manager.css">
+
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap" rel="stylesheet">
+
+</head>
+<body>
+  <div class="container">
+    <div class="hamburger-menu" onclick="toggleSidebar()">&#9776;</div>
+
+    <h1>Time International Bank</h1>
+    <h2>Welcome, {% if session.get('job_title') %}{{ session.job_title }}{% else %}Manager{% endif %}!</h2>
+
+    <div class="user-info">
+      <label>Name:</label>
+      <div>{% if session.get('name') %}{{ session.name }}{% else %}<span class="data-placeholder">Not Available</span>{% endif %}</div>
+
+      <label>Employee ID:</label>
+      <div>{% if session.get('emp_id') %}{{ session.emp_id }}{% else %}<span class="data-placeholder">Not Available</span>{% endif %}</div>
+
+      <label>Role:</label>
+      <div>{% if session.get('job_title') %}{{ session.job_title }}{% else %}<span class="data-placeholder">Not Available</span>{% endif %}</div>
+    </div>
+
+    <div class="stats">
+      <div class="stat-card">
+        <h3>Total Employees</h3>
+        <p>{% if total_employees is defined %}{{ "{:,}".format(total_employees) }}{% else %}<span class="data-placeholder">Loading...</span>{% endif %}</p>
+      </div>
+      <div class="stat-card">
+        <h3>Total Accounts</h3>
+        <p>{% if total_accounts is defined %}{{ "{:,}".format(total_accounts) }}{% else %}<span class="data-placeholder">Loading...</span>{% endif %}</p>
+      </div>
+      <div class="stat-card">
+        <h3>Total Balance</h3>
+        <p>{% if total_balance is defined %}{{ "{:,.2f} ETB".format(total_balance) }}{% else %}<span class="data-placeholder">Loading...</span>{% endif %}</p>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button id="viewReports">View Reports</button>
+      <button id="manageEmployees">Manage Employees</button>
+    </div>
+
+    <div class="report" id="reportSection" style="display: none;">
+      <h3>Hiring and Firing Reports</h3>
+      <ul>
+        {% if recent_actions and recent_actions|length > 0 %}
+          {% for action in recent_actions %}
+          <li>
+            {{ action.emp_name|default('Unknown') }} - 
+            {{ action.action_type|default('Action') }} on 
+            {{ action.action_date.strftime('%Y-%m-%d') if action.action_date else 'Unknown date' }}
+            {% if action.details %}({{ action.details }}){% endif %}
+          </li>
+          {% endfor %}
+        {% else %}
+          <li class="data-placeholder">No recent actions found</li>
+        {% endif %}
+      </ul>
+    </div>
+
+    <div class="employee-list" id="employeeListSection" style="display: none;">
+      <h3>Employee List</h3>
+      <ul>
+        {% if employee_list and employee_list|length > 0 %}
+          {% for employee in employee_list %}
+          <li>
+            {{ employee.emp_name|default('Unknown') }} - 
+            {{ employee.job_title|default('No title') }} - 
+            {{ "{:,.2f} ETB".format(employee.salary) if employee.salary else '0.00 ETB' }} -
+            {{ employee.dep_name|default('No department') }}
+          </li>
+          {% endfor %}
+        {% else %}
+          <li class="data-placeholder">No employees found</li>
+        {% endif %}
+      </ul>
+    </div>
+  </div>
+
+  <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+  <div class="sidebar" id="sidebar">
+    <button onclick="openModal()">Change Username & Password</button>
+    <button onclick="logout()" class="logout-btn">Logout</button>
+  </div>
+
+  <div class="modal" id="modal">
+    <div class="modal-content">
+      <h3>Change Username & Password</h3>
+      <button class="close-modal" onclick="closeModal()">×</button>
+
+      <input type="text" id="currentUsername" placeholder="Current Username" value="{{ session.get('username', '') }}">
+      <input type="text" id="newUsername" placeholder="New Username">
+      <input type="password" id="currentPassword" placeholder="Current Password">
+      <input type="password" id="newPassword" placeholder="New Password">
+      <button onclick="updateCredentials()">Save Changes</button>
+      <p id="credentialMessage"></p>
+    </div>
+  </div>
+  <script src="/static/js/manager.js"></script>
+
+</body>
+</html>

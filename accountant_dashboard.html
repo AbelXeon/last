@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Time International Bank</title>
+  <link rel="stylesheet" href="/static/css/accountant.css">
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Dashboard -->
+  <div class="dashboard-container" id="dashboard">
+    <div class="hamburger-menu" onclick="toggleSidebar()">&#9776;</div>
+
+    <h1>Time International Bank</h1>
+    <h2>Welcome, Accountant!</h2>
+
+    <div class="user-info">
+      <label for="name">Name:</label>
+      <div>Test Test</div>
+
+      <label for="empId">Employee ID:</label>
+      <div>EMP123</div>
+
+      <label for="role">Role:</label>
+      <div>Accountant</div>
+    </div>
+
+    <div class="button-row">
+      <button onclick="showPage('withdraw')">Withdraw</button>
+      <button onclick="showPage('deposit')">Deposit</button>
+      <button onclick="showPage('balance')">Balance</button>
+    </div>
+
+    <button class="create-account-button" onclick="showPage('create-account')">Create Account</button>
+  </div>
+
+  <!-- Sidebar and Modal (Shared across pages) -->
+  <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+  <div class="sidebar" id="sidebar">
+    <button onclick="openModal()">Change Username & Password</button>
+    <button onclick="logout()" class="logout-btn">Logout</button>
+  </div>
+
+  <div class="modal" id="modal">
+    <div class="modal-content">
+      <button class="close-modal" onclick="closeModal()">×</button>
+      <h3>Change Username & Password</h3>
+      <input type="text" placeholder="Current Username">
+      <input type="text" placeholder="New Username">
+      <input type="password" placeholder="Current Password">
+      <input type="password" placeholder="New Password">
+      <button onclick="closeModal()">Save Changes</button>
+    </div>
+  </div>
+
+  <!-- Balance Page -->
+  <div class="page-container balance-container" id="balance-page">
+    <div class="back-button" onclick="showPage('dashboard')">←</div>
+    <h1>Time International Bank</h1>
+    <h2>Balance</h2>
+    <form id="balanceForm">
+      <label for="balanceAccountNo">Account No:</label>
+      <input type="text" id="balanceAccountNo" name="accountNo" required>
+      <button type="submit">Search</button>
+    </form>
+  </div>
+
+  <!-- Withdraw Page -->
+  <div class="page-container transaction-container" id="withdraw-page">
+    <div class="back-button" onclick="showPage('dashboard')">←</div>
+    <h1>Time International Bank</h1>
+    <h2>Withdraw</h2>
+    <form id="withdrawForm">
+      <label for="withdrawAccountNo">Account No:</label>
+      <input type="text" id="withdrawAccountNo" name="accountNo" required>
+      <button type="submit">Search</button>
+    </form>
+  </div>
+
+  <!-- Deposit Page -->
+  <div class="page-container transaction-container" id="deposit-page">
+    <div class="back-button" onclick="showPage('dashboard')">←</div>
+    <h1>Time International Bank</h1>
+    <h2>Deposit</h2>
+    <form id="depositForm">
+      <label for="depositAccountNo">Account No:</label>
+      <input type="text" id="depositAccountNo" name="accountNo" required>
+      <button type="submit">Search</button>
+    </form>
+  </div>
+
+  <!-- Create Account Page -->
+  <div class="page-container create-account-container" id="create-account-page">
+    <div class="back-button" onclick="showPage('dashboard')">←</div>
+    <h1>Time International Bank</h1>
+    <h2>Create Account</h2>
+    <form id="createAccountForm">
+      <div class="form-grid">
+        <div class="left-column">
+          <label for="name">Name:</label>
+          <input type="text" id="name" name="name" required>
+          <label for="phone">Phone:</label>
+          <input type="tel" id="phone" name="phone" required>
+          <label for="email">Email:</label>
+          <input type="email" id="email" name="email" required>
+        </div>
+        <div class="right-column">
+          <label for="dob">Date of Birth:</label>
+          <input type="date" id="dob" name="dob" required>
+          <label for="gender">Gender:</label>
+          <select id="gender" name="gender" required>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+          </select>
+          <label for="address">Address:</label>
+          <textarea id="address" name="address" rows="3" required></textarea>
+        </div>
+      </div>
+      <button type="submit">Create Account</button>
+    </form>
+  </div>
+  <script src="/static/js/accountant.js"></script>
+
+</body>
+</html>
